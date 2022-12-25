@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using System.Reflection;
 using System.Text;
 
 var successful = Encoding.UTF8.GetBytes("successful");
