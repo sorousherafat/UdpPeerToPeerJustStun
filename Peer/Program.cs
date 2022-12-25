@@ -13,9 +13,8 @@ var portNumber = Convert.ToInt32(Console.ReadLine());
 using var stunUdpClient = new UdpClient(portNumber);
 
 Console.Write("> add ");
-var groupName = Console.ReadLine();
-var addCommandData = $"add {groupName}";
-var addCommandDataBytes = Encoding.UTF8.GetBytes(addCommandData);
+var groupName = Console.ReadLine() ?? "default";
+var addCommandDataBytes = Encoding.UTF8.GetBytes(groupName);
 stunUdpClient.Send(addCommandDataBytes, stunEndPoint);
 var addCommandResponseBytes = stunUdpClient.Receive(ref remoteEndPoint);
 
@@ -37,6 +36,9 @@ using var transmitterUdpClient = new UdpClient(destinationPort);
 var peerSourceEndPoint = new IPEndPoint(peerIpAddress, sourcePort);
 var peerDestinationEndPoint = new IPEndPoint(peerIpAddress, destinationPort);
 
+Console.WriteLine($"DEBUG:\n  listenerUdpClient:\n    from {sourcePort}\n" +
+                  $"  transmitterUdpClient:\n    from {destinationPort}\n    to {peerSourceEndPoint}");
+
 Console.WriteLine("punching UDP hole...");
 listenerUdpClient.Send(Array.Empty<byte>(), peerDestinationEndPoint);
 
@@ -49,6 +51,7 @@ while (true)
     var message = Console.ReadLine();
     if (!string.IsNullOrEmpty(message))
     {
+        Console.WriteLine($"DEBUG:  message = {message}");
         var messageDataBytes = Encoding.UTF8.GetBytes(message);
         transmitterUdpClient.Send(messageDataBytes, peerSourceEndPoint);
     }
