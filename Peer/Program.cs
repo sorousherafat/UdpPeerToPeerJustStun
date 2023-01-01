@@ -51,11 +51,11 @@ void Listen()
     {
         var messageBytes = udpClient.Receive(ref remoteEndPoint);
         var message = Encoding.UTF8.GetString(messageBytes);
-        if (!string.IsNullOrEmpty(message))
-        {
-            ConsoleHelper.ClearCurrentLine();
-            Console.Write($"peer: {message}\n> ");
-        }
+
+        if (string.IsNullOrEmpty(message)) continue;
+
+        ConsoleHelper.ClearCurrentLine();
+        Console.Write($"peer: {message}\n> ");
     }
 }
 
