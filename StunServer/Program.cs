@@ -3,7 +3,6 @@ using System.Net.Sockets;
 using System.Text;
 
 var successMessage = Encoding.UTF8.GetBytes("successful");
-var peerKnownPorts = new[] { 50004, 50005 };
 
 Console.Write("enter listening port: ");
 var listeningPort = Convert.ToInt32(Console.ReadLine());
@@ -26,16 +25,16 @@ while (true)
 
     if (peersData[group].Count == 2)
     {
-        InformClient(peersData[group][0], peersData[group][1], 0);
-        InformClient(peersData[group][1], peersData[group][0], 1);
+        InformClient(peersData[group][0], peersData[group][1]);
+        InformClient(peersData[group][1], peersData[group][0]);
         peersData.Remove(group);
         Console.WriteLine($"removed group {group}");
     }
 }
 
-void InformClient(IPEndPoint destinationEndPoint, IPEndPoint sourceEndPoint, int knownPortIndex)
+void InformClient(IPEndPoint destinationEndPoint, IPEndPoint sourceEndPoint)
 {
-    var dataString = $"{sourceEndPoint.Address} {sourceEndPoint.Port} {peerKnownPorts[knownPortIndex]}";
+    var dataString = $"{sourceEndPoint.Address} {sourceEndPoint.Port}";
     var dataBytes = Encoding.UTF8.GetBytes(dataString);
     Console.WriteLine($"sending \"{dataString}\"\n  to {destinationEndPoint}...");
     udpClient.Send(dataBytes, destinationEndPoint);
@@ -47,5 +46,5 @@ void InformClient(IPEndPoint destinationEndPoint, IPEndPoint sourceEndPoint, int
     var receivedData = udpClient.Receive(ref endPoint);
     var group = Encoding.UTF8.GetString(receivedData);
 
-return (endPoint, group);
+    return (endPoint, group);
 }

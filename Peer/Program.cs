@@ -10,13 +10,13 @@ var stunEndPoint = IPEndPoint.Parse(Console.ReadLine() ?? "");
 
 Console.Write("enter port number: ");
 var portNumber = Convert.ToInt32(Console.ReadLine());
-using var stunUdpClient = new UdpClient(portNumber);
+using var udpClient = new UdpClient(portNumber);
 
 Console.Write("> add ");
 var groupName = Console.ReadLine() ?? "default";
 var addCommandDataBytes = Encoding.UTF8.GetBytes(groupName);
-stunUdpClient.Send(addCommandDataBytes, stunEndPoint);
-var addCommandResponseBytes = stunUdpClient.Receive(ref remoteEndPoint);
+udpClient.Send(addCommandDataBytes, stunEndPoint);
+var addCommandResponseBytes = udpClient.Receive(ref remoteEndPoint);
 
 if (!addCommandResponseBytes.SequenceEqual(successful))
 {
@@ -25,22 +25,11 @@ if (!addCommandResponseBytes.SequenceEqual(successful))
 }
 Console.WriteLine("connected to STUN server");
 
-var (peerIpAddress, sourcePort, destinationPort) = ReadPeerInfo();
-Console.WriteLine("got peer data:");
-Console.WriteLine($"  IP Address:       {peerIpAddress}");
-Console.WriteLine($"  Source Port:      {sourcePort}");
-Console.WriteLine($"  Destination Port: {destinationPort}");
-
-using var listenerUdpClient = new UdpClient(sourcePort);
-using var transmitterUdpClient = new UdpClient(destinationPort);
-var peerSourceEndPoint = new IPEndPoint(peerIpAddress, sourcePort);
-var peerDestinationEndPoint = new IPEndPoint(peerIpAddress, destinationPort);
-
-Console.WriteLine($"DEBUG:\n  listenerUdpClient:\n    from {sourcePort}\n" +
-                  $"  transmitterUdpClient:\n    from {destinationPort}\n    to {peerSourceEndPoint}");
+var peerEndPoint = ReadPeerInfo();
+Console.WriteLine($"peer endpoint: {peerEndPoint}");
 
 Console.WriteLine("punching UDP hole...");
-listenerUdpClient.Send(Array.Empty<byte>(), peerDestinationEndPoint);
+udpClient.Send(Array.Empty<byte>(), peerEndPoint);
 
 var listenerThread = new Thread(Listen);
 listenerThread.Start();
@@ -51,9 +40,8 @@ while (true)
     var message = Console.ReadLine();
     if (!string.IsNullOrEmpty(message))
     {
-        Console.WriteLine($"DEBUG:  message = {message}");
         var messageDataBytes = Encoding.UTF8.GetBytes(message);
-        transmitterUdpClient.Send(messageDataBytes, peerSourceEndPoint);
+        udpClient.Send(messageDataBytes, peerEndPoint);
     }
 }
 
@@ -61,19 +49,33 @@ void Listen()
 {
     while (true)
     {
-        var dataBytes = listenerUdpClient.Receive(ref remoteEndPoint);
-        var data = Encoding.UTF8.GetString(dataBytes);
-        Console.WriteLine($"peer: {data}");
+        var messageBytes = udpClient.Receive(ref remoteEndPoint);
+        var message = Encoding.UTF8.GetString(messageBytes);
+        if (!string.IsNullOrEmpty(message))
+        {
+            ConsoleHelper.ClearCurrentLine();
+            Console.Write($"peer: {message}\n> ");
+        }
     }
 }
 
-(IPAddress, int, int) ReadPeerInfo()
+IPEndPoint ReadPeerInfo()
 {
-    var stunPeerInfoDataBytes = stunUdpClient.Receive(ref remoteEndPoint);
+    var stunPeerInfoDataBytes = udpClient.Receive(ref remoteEndPoint);
     var dataStringArray = Encoding.UTF8.GetString(stunPeerInfoDataBytes).Split(" ");
-    var ipAddress = IPAddress.Parse(dataStringArray[0]);
-    var sourcePort = Convert.ToInt32(dataStringArray[1]);
-    var destinationPort = Convert.ToInt32(dataStringArray[2]);
+    var peerIpAddress = IPAddress.Parse(dataStringArray[0]);
+    var peerPort = Convert.ToInt32(dataStringArray[1]);
 
-    return (ipAddress, sourcePort, destinationPort);
+    return new IPEndPoint(peerIpAddress, peerPort);
+}
+
+internal class ConsoleHelper
+{
+    public static void ClearCurrentLine()
+    {
+        var currentLineCursor = Console.CursorTop;
+        Console.SetCursorPosition(0, Console.CursorTop);
+        Console.Write(new string(' ', Console.WindowWidth));
+        Console.SetCursorPosition(0, currentLineCursor);
+    }
 }
